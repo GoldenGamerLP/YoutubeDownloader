@@ -81,8 +81,8 @@ public class ModernScrollPane extends JScrollPane {
         });
 
         // Layering
-        setComponentZOrder(getVerticalScrollBar(), 0);
-        setComponentZOrder(getHorizontalScrollBar(), 1);
+        setComponentZOrder(getVerticalScrollBar(), 1);
+        setComponentZOrder(getHorizontalScrollBar(), 2);
         setComponentZOrder(getViewport(), 2);
 
         viewport.setView(view);
@@ -105,23 +105,10 @@ public class ModernScrollPane extends JScrollPane {
     private static class ModernScrollBarUI extends BasicScrollBarUI {
 
         private JScrollPane sp;
-        private long lastUse = System.currentTimeMillis();
-        private boolean isPainted = false;
 
         public ModernScrollBarUI(ModernScrollPane sp) {
             this.sp = sp;
 
-            timer.scheduleAtFixedRate(new TimerTask() {
-                @Override
-                public void run() {
-                    if(isPainted == isCooldown()) return;
-                    isPainted = isCooldown();
-                    sp.repaint();
-                }
-            }, 500, 250);
-
-            sp.getVerticalScrollBar().addAdjustmentListener(e -> lastUse = System.currentTimeMillis());
-            sp.getHorizontalScrollBar().addAdjustmentListener(e -> lastUse = System.currentTimeMillis());
         }
 
         @Override
@@ -144,7 +131,6 @@ public class ModernScrollPane extends JScrollPane {
 
         @Override
         protected void paintThumb(Graphics g, JComponent c, Rectangle thumbBounds) {
-            System.out.println("hello" + isCooldown());
             Color color = Constants.buttonColor;
             int orientation = scrollbar.getOrientation();
             int x = thumbBounds.x;
@@ -157,7 +143,7 @@ public class ModernScrollPane extends JScrollPane {
             height = Math.max(height, THUMB_SIZE);
 
             Graphics2D graphics2D = (Graphics2D) g.create();
-            graphics2D.setColor(isCooldown() ? color.brighter() : color);
+            graphics2D.setColor(color);
             graphics2D.fillRect(x, y, width, height);
             graphics2D.dispose();
         }
@@ -166,10 +152,6 @@ public class ModernScrollPane extends JScrollPane {
         protected void setThumbBounds(int x, int y, int width, int height) {
             super.setThumbBounds(x, y, width, height);
             sp.repaint();
-        }
-
-        private boolean isCooldown() {
-            return lastUse + Constants.SCROLL_BAR_FADE_OUT_DELAY < System.currentTimeMillis();
         }
 
         /**

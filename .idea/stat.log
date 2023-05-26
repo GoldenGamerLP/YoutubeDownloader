@@ -375,3 +375,4 @@
 {"ts":1685128153489,"action":"FILE_OPENED","file":"/src/main/java/me/alex/youtubedownloader/models/YoutubeResult.java","tags":{"FILE_LINE_OF_CODE":"31"}}
 {"ts":1685128175921,"action":"FILE_CLOSED","file":"/src/main/java/me/alex/youtubedownloader/models/YoutubeResult.java","tags":{"FILE_LINE_OF_CODE":"31"}}
 {"ts":1685128175921,"action":"FILE_OPENED","file":"/src/main/java/me/alex/youtubedownloader/renderer/ModernScrollPane.java","tags":{"FILE_LINE_OF_CODE":"192"}}
+{"ts":1685128418032,"action":"IDE_DEACTIVATED"}
