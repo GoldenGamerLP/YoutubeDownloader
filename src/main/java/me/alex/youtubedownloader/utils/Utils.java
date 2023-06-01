@@ -27,29 +27,21 @@ import java.net.URL;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.*;
+import java.util.concurrent.CancellationException;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
+
+import static me.alex.youtubedownloader.constants.Constants.globalExecutor;
 
 public class Utils {
 
     private final YoutubeDownloader yt;
 
-    private final ExecutorService exec;
-
     public Utils() {
-
-        ThreadFactory th = r -> {
-            Thread t = new Thread(r);
-            t.setPriority(Thread.MIN_PRIORITY);
-            t.setDaemon(true);
-            return t;
-        };
-        this.exec = Executors.newCachedThreadPool(th);
-
         Config config = new Config.Builder()
                 .maxRetries(2)
-                .executorService(exec)
+                .executorService(globalExecutor)
                 .build();
 
         yt = new YoutubeDownloader(config);
@@ -109,7 +101,7 @@ public class Utils {
                 futures.add(ft);
             }
             return CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new));
-        }, exec);
+        }, globalExecutor);
     }
 
     public CompletableFuture<List<String>> getVideoIds(List<YoutubeResult> list) {
@@ -137,7 +129,7 @@ public class Utils {
             playlist.add(ft);
         }
 
-        return CompletableFuture.allOf(playlist.toArray(CompletableFuture[]::new)).thenApplyAsync(v -> videos, exec);
+        return CompletableFuture.allOf(playlist.toArray(CompletableFuture[]::new)).thenApplyAsync(v -> videos, globalExecutor);
     }
 
     public CompletableFuture<File> download(String videoID, String format, Path location, Consumer<Integer> loading) {
@@ -189,7 +181,7 @@ public class Utils {
                     System.out.println("Canceled download of " + videoInfo.details().title() + "." + format);
                 }
             }
-        }, exec);
+        }, globalExecutor);
 
         return downloadFuture;
     }
@@ -200,13 +192,13 @@ public class Utils {
 
             for (SearchResultItem searchResultItem : searchResultItems) {
                 CompletableFuture<YoutubeResult> rs = CompletableFuture
-                        .supplyAsync(() -> this.getLargeThumbnail(searchResultItem), exec)
+                        .supplyAsync(() -> this.getLargeThumbnail(searchResultItem), globalExecutor)
                         .thenApply(imageIcon -> new YoutubeResult(searchResultItem, imageIcon));
                 results.add(rs);
             }
 
             return results;
-        }, exec);
+        }, globalExecutor);
     }
 
     public CompletableFuture<List<SearchResultItem>> searchFor(String query, TypeField typeField) {
@@ -216,7 +208,7 @@ public class Utils {
             searchResult.type(typeField);
 
             return yt.search(searchResult).data().items();
-        }, exec);
+        }, globalExecutor);
     }
 
     public CompletableFuture<VideoInfo> getVideoInfo(String videoID) {
@@ -228,7 +220,7 @@ public class Utils {
             if (!vid.ok()) throw new RuntimeException(vid.error());
 
             return vid.data();
-        }, exec);
+        }, globalExecutor);
 
         return future;
     }
@@ -236,6 +228,6 @@ public class Utils {
     public CompletableFuture<PlaylistInfo> getPlayListInfo(String playlistID) {
         RequestPlaylistInfo request = new RequestPlaylistInfo(playlistID);
 
-        return CompletableFuture.supplyAsync(() -> yt.getPlaylistInfo(request).data(), exec);
+        return CompletableFuture.supplyAsync(() -> yt.getPlaylistInfo(request).data(), globalExecutor);
     }
 }

@@ -2,7 +2,6 @@ package me.alex.youtubedownloader;
 
 import com.github.kiulian.downloader.YoutubeDownloader;
 import com.github.kiulian.downloader.model.search.field.TypeField;
-import me.alex.youtubedownloader.constants.Constants;
 import me.alex.youtubedownloader.listener.*;
 import me.alex.youtubedownloader.models.YoutubeResult;
 import me.alex.youtubedownloader.renderer.ModernScrollPane;
@@ -12,43 +11,107 @@ import me.alex.youtubedownloader.utils.Utils;
 import javax.swing.*;
 import javax.swing.plaf.nimbus.NimbusLookAndFeel;
 import java.awt.*;
+import java.awt.event.FocusEvent;
 import java.nio.file.Path;
 
 import static me.alex.youtubedownloader.constants.Constants.*;
 
 public class YoutubeUI extends JFrame {
-    private final JTextField searchField;
-    private final JButton searchButton;
-    private final DefaultListModel<YoutubeResult> listModel;
-    private final JList<YoutubeResult> resultList;
-    private final JComboBox<TypeField> typeField;
-    private final JComboBox<String> formatField;
-    private final JLabel statusLabel;
-    private final JButton downloadButton;
-    private final JButton locationButton;
-    private final JFileChooser locationChooser;
-    private final YoutubeDownloader yt;
-    private final Utils utils;
-    private final JScrollPane scrollPane;
-    private final JPanel statusPanel;
+    private JTextField searchField;
+    private JButton searchButton;
+    private DefaultListModel<YoutubeResult> listModel;
+    private JList<YoutubeResult> resultList;
+    private JComboBox<TypeField> typeField;
+    private JComboBox<String> formatField;
+    private JLabel statusLabel;
+    private JButton downloadButton;
+    private JButton locationButton;
+    private JFileChooser locationChooser;
+    private YoutubeDownloader yt;
+    private Utils utils;
+    private JScrollPane scrollPane;
+    private JPanel statusPanel;
+    private JButton clearButton;
 
     public YoutubeUI() {
         setTitle("Youtube Search Client");
 
-        this.yt = new YoutubeDownloader();
-        this.yt.getConfig().setMaxRetries(2);
+        initUI();
+        addComponents();
+        mechanics();
 
-        this.utils = new Utils();
+        EventQueue.invokeLater(() -> {
+            setVisible(true);
 
-        design();
+            searchField.requestFocusInWindow(FocusEvent.Cause.ACTIVATION);
+            searchField.selectAll();
+        });
+    }
 
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(650, 350);
-        setLocationRelativeTo(null);
-        setLayout(new BorderLayout());
+    private void addComponents() {
+        addSearchPanel();
+        addResultList();
+        addDownloadPanel();
+    }
 
+    private void addDownloadPanel() {
+        statusPanel = new JPanel();
+        statusPanel.setBackground(highlightedBackground);
+        statusPanel.setBorder(BorderFactory.createEmptyBorder(2, 2, 2, 2));
+        // Clear-Button unten hinzufügen
+        clearButton = new JButton("Clear Results");
+        clearButton.setOpaque(false);
+        clearButton.addActionListener(new ClearResultsActionListener(this));
+        // Search-Button-Action hinzufügen
 
-        // Suche oben hinzufügen
+        // Status-Label hinzufügen das über alles drüber liegt und durchsichtig ist
+        statusLabel = new JLabel();
+        statusLabel.setForeground(foreground);
+        statusLabel.setHorizontalAlignment(JLabel.RIGHT);
+        statusLabel.setOpaque(false);
+
+        // Download-Button hinzufügen
+        downloadButton = new JButton("Download");
+        downloadButton.addActionListener(new DownloadActionListener(this));
+
+        // Location-Button hinzufügen
+        locationButton = new JButton("Choose Location");
+        locationButton.addActionListener(new LocationActionListener(this));
+
+        formatField = new JComboBox<>(new String[]{"mp4", "mp3"});
+
+        // Status-Label overlay
+        statusPanel.setLayout(new GridLayout());
+        statusPanel.add(formatField);
+        statusPanel.add(downloadButton);
+        statusPanel.add(clearButton); // Clear-Button auch unten hinzufügen (siehe oben
+        statusPanel.add(locationButton);
+        statusPanel.add(statusLabel);
+
+        add(statusPanel, BorderLayout.SOUTH);
+    }
+
+    private void addResultList() {
+        listModel = new DefaultListModel<>();
+        resultList = new JList<>(listModel);
+        resultList.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
+        resultList.setSelectionBackground(new Color(32, 33, 35).darker());
+        resultList.setSelectionForeground(foreground);
+        resultList.setForeground(foreground);
+        resultList.setBackground(background);
+        resultList.setCellRenderer(new ResultListCellRenderer());
+        resultList.addListSelectionListener(new ResultListSelectionListener(this));
+        scrollPane = new ModernScrollPane(resultList);
+        scrollPane.setBorder(BorderFactory.createEmptyBorder());
+
+        //smooth scrolling
+        scrollPane.getVerticalScrollBar().setUnitIncrement(4);
+        scrollPane.getHorizontalScrollBar().setUnitIncrement(4);
+
+        add(scrollPane, BorderLayout.CENTER);
+    }
+
+    private void addSearchPanel() {
         JPanel searchPanel = new JPanel();
         searchPanel.setBorder(BorderFactory.createEmptyBorder());
         searchPanel.setBackground(highlightedBackground);
@@ -79,76 +142,44 @@ public class YoutubeUI extends JFrame {
         searchPanel.add(searchButton);
 
         add(searchPanel, BorderLayout.NORTH);
+    }
 
-        // Ergebnisliste hinzufügen
-        listModel = new DefaultListModel<>();
-        resultList = new JList<>(listModel);
-        resultList.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
-        resultList.setSelectionBackground(new Color(32, 33, 35).darker());
-        resultList.setSelectionForeground(foreground);
-        resultList.setForeground(foreground);
-        resultList.setBackground(background);
-        resultList.setCellRenderer(new ResultListCellRenderer());
-        resultList.addListSelectionListener(new ResultListSelectionListener(this));
-        scrollPane = new ModernScrollPane(resultList);
-        scrollPane.setBorder(BorderFactory.createEmptyBorder());
+    private void initUI() {
+        this.yt = new YoutubeDownloader();
+        this.yt.getConfig().setMaxRetries(2);
+        this.utils = new Utils();
 
-        //smooth scrolling
-        scrollPane.getVerticalScrollBar().setUnitIncrement(4);
-        scrollPane.getHorizontalScrollBar().setUnitIncrement(4);
+        setLookAndFeel();
+        setWindowProperties();
+    }
 
-        add(scrollPane, BorderLayout.CENTER);
+    private void setWindowProperties() {
+        //set the size of the frame to be 70% of the whole screen
+        Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+        setSize((int) (screenSize.width * 0.7), (int) (screenSize.height * 0.7));
 
-        //Bottom Panel
-        statusPanel = new JPanel();
-        statusPanel.setBorder(BorderFactory.createEmptyBorder(2, 2, 2, 2));
-        // Clear-Button unten hinzufügen
-        JButton clearButton = new JButton("Clear Results");
-        clearButton.setOpaque(false);
-        clearButton.addActionListener(new ClearResultsActionListener(this));
-        // Search-Button-Action hinzufügen
-
-        // Status-Label hinzufügen das über alles drüber liegt und durchsichtig ist
-        statusLabel = new JLabel();
-        statusLabel.setForeground(foreground);
-        statusLabel.setHorizontalAlignment(JLabel.RIGHT);
-        statusLabel.setOpaque(false);
-
-        // Download-Button hinzufügen
-        downloadButton = new JButton("Download");
-        downloadButton.addActionListener(new DownloadActionListener(this));
-
-        // Location-Button hinzufügen
-        locationButton = new JButton("Choose Location");
-        locationButton.addActionListener(new LocationActionListener(this));
-
-        formatField = new JComboBox<>(new String[]{"mp4", "mp3"});
-
-        // Status-Label overlay
-        statusPanel.setLayout(new GridLayout());
-        statusPanel.add(formatField);
-        statusPanel.add(downloadButton);
-        statusPanel.add(clearButton); // Clear-Button auch unten hinzufügen (siehe oben
-        statusPanel.add(locationButton);
-        statusPanel.add(statusLabel);
-
-        add(statusPanel, BorderLayout.SOUTH);
-
-        mechanics();
-
-        EventQueue.invokeLater(() -> {
-            searchField.requestFocus();
-            searchField.selectAll();
-
-            setVisible(true);
-        });
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setLocationRelativeTo(null);
+        setLayout(new BorderLayout());
     }
 
     private void mechanics() {
         getRootPane().setDefaultButton(searchButton);
+        getRootPane().setWindowDecorationStyle(JRootPane.NONE);
+
+        downloadButton.setIconTextGap(8);
+        locationButton.setIconTextGap(8);
+        searchButton.setIconTextGap(8);
+        clearButton.setIconTextGap(8);
+
+        mainIcon.thenAccept(this::setIconImage);
+        downloadIcon.thenApply(ImageIcon::new).thenAccept(downloadButton::setIcon);
+        folderIcon.thenApply(ImageIcon::new).thenAccept(locationButton::setIcon);
+        searchIcon.thenApply(ImageIcon::new).thenAccept(searchButton::setIcon);
+        trashIcon.thenApply(ImageIcon::new).thenAccept(clearButton::setIcon);
     }
 
-    private void design() {
+    private void setLookAndFeel() {
         //make the ui look better
 
         //Set default color for all components
@@ -159,18 +190,17 @@ public class YoutubeUI extends JFrame {
 
         try {
             UIManager.setLookAndFeel(new NimbusLookAndFeel());
-            System.out.println("UIManager set to NimbusLookAndFeel");
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
     public void addResult(YoutubeResult result) {
-        listModel.addElement(result);
+        SwingUtilities.invokeLater(() -> listModel.addElement(result));
     }
 
     public void clearResults() {
-        listModel.clear();
+        SwingUtilities.invokeLater(listModel::clear);
     }
 
     public JList<YoutubeResult> getResultList() {

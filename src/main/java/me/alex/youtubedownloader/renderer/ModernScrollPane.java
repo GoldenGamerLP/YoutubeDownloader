@@ -6,7 +6,6 @@ import javax.swing.*;
 import javax.swing.plaf.basic.BasicScrollBarUI;
 import java.awt.*;
 import java.util.Timer;
-import java.util.TimerTask;
 
 public class ModernScrollPane extends JScrollPane {
 
@@ -87,6 +86,7 @@ public class ModernScrollPane extends JScrollPane {
 
         viewport.setView(view);
     }
+
     private boolean isVerticalScrollBarfNecessary() {
         Rectangle viewRect = viewport.getViewRect();
         Dimension viewSize = viewport.getViewSize();
@@ -104,7 +104,7 @@ public class ModernScrollPane extends JScrollPane {
      */
     private static class ModernScrollBarUI extends BasicScrollBarUI {
 
-        private JScrollPane sp;
+        private final JScrollPane sp;
 
         public ModernScrollBarUI(ModernScrollPane sp) {
             this.sp = sp;
@@ -124,9 +124,6 @@ public class ModernScrollPane extends JScrollPane {
         @Override
         protected void paintTrack(Graphics g, JComponent c, Rectangle trackBounds) {
         }
-
-
-
 
 
         @Override
